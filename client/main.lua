@@ -27,26 +27,29 @@ RegisterNetEvent('rpa-fuel:client:requestRefuel', function(vehicle)
     isRefueling = true
     
     local currentFuel = GetVehicleFuelLevel(vehicle)
+    local currentFuel = GetVehicleFuelLevel(vehicle)
     if currentFuel >= 100.0 then
-        exports['rpa-lib']:Notify("Vehicle tank is full!", "info")
+        exports['rpa-lib']:Notify(_U('fuel_full'), "info")
         isRefueling = false
         return
     end
 
-    exports['rpa-lib']:Notify("Refueling...", "info", 3000)
+    exports['rpa-lib']:Notify(_U('fuel_refueling'), "info", 3000)
     -- Fake progress
     Wait(3000)
     
     SetVehicleFuelLevel(vehicle, 100.0)
-    exports['rpa-lib']:Notify("Vehicle refueled!", "success")
+    exports['rpa-lib']:Notify(_U('fuel_cost', 50), "success") -- hardcoded 50 for now
     isRefueling = false
 end)
 
 -- Fuel Consumption Loop
 CreateThread(function()
+    local wait = 2000
     while true do
         local ped = PlayerPedId()
         if IsPedInAnyVehicle(ped, false) then
+            wait = 1000
             local vehicle = GetVehiclePedIsIn(ped, false)
             if GetPedInVehicleSeat(vehicle, -1) == ped then
                 local currentFuel = GetVehicleFuelLevel(vehicle)
@@ -54,16 +57,17 @@ CreateThread(function()
                 local speed = GetEntitySpeed(vehicle)
                 
                 if currentFuel > 0 then
-                    -- Simple consumption formula
                     if speed > 1.0 and rpm > 0.2 then
-                        local consumption = (rpm * speed) / 2000 -- adjust magic numbers
+                        local consumption = (rpm * speed) / 2000
                         SetVehicleFuelLevel(vehicle, currentFuel - consumption)
                     end
                 else
                     SetVehicleEngineOn(vehicle, false, true, true)
                 end
             end
+        else
+            wait = 2000
         end
-        Wait(1000)
+        Wait(wait)
     end
 end)
