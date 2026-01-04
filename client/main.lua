@@ -1,15 +1,14 @@
 -- Basic fuel logic
 local isRefueling = false
+local pendingVehicle = nil
 
 CreateThread(function()
     if Config.System == 'target' then
         exports['rpa-lib']:AddTargetModel(Config.FuelNozzleModels, {
             {
                 label = "Refuel Vehicle",
-                icon = "fas fa-gas-pump", -- Assuming fontawesome available
+                icon = "fas fa-gas-pump",
                 action = function(entity)
-                    -- Check for vehicle nearby or if player is in vehicle? usually target on pump means OUT of vehicle
-                    -- Simple logic: Find closest vehicle
                     local vehicle = GetClosestVehicle(GetEntityCoords(PlayerPedId()), 5.0, 0, 71)
                     if DoesEntityExist(vehicle) then
                         TriggerEvent('rpa-fuel:client:requestRefuel', vehicle)
@@ -25,22 +24,44 @@ end)
 RegisterNetEvent('rpa-fuel:client:requestRefuel', function(vehicle)
     if isRefueling then return end
     isRefueling = true
+    pendingVehicle = vehicle
     
-    local currentFuel = GetVehicleFuelLevel(vehicle)
     local currentFuel = GetVehicleFuelLevel(vehicle)
     if currentFuel >= 100.0 then
-        exports['rpa-lib']:Notify(_U('fuel_full'), "info")
+        exports['rpa-lib']:Notify(_U('fuel_full') or "Tank is full", "info")
         isRefueling = false
+        pendingVehicle = nil
         return
     end
-
-    exports['rpa-lib']:Notify(_U('fuel_refueling'), "info", 3000)
-    -- Fake progress
-    Wait(3000)
     
-    SetVehicleFuelLevel(vehicle, 100.0)
-    exports['rpa-lib']:Notify(_U('fuel_cost', 50), "success") -- hardcoded 50 for now
+    local fuelNeeded = 100.0 - currentFuel
+    local cost = math.ceil(fuelNeeded * Config.FuelCost)
+
+    exports['rpa-lib']:Notify(_U('fuel_refueling') or "Refueling...", "info", 3000)
+    
+    -- Refueling animation
+    local ped = PlayerPedId()
+    TaskStartScenarioInPlace(ped, "PROP_HUMAN_BUM_BIN", 0, true)
+    Wait(3000)
+    ClearPedTasks(ped)
+    
+    -- Request payment from server
+    TriggerServerEvent('rpa-fuel:server:pay', cost)
+end)
+
+-- Payment success - complete the refuel
+RegisterNetEvent('rpa-fuel:client:paymentSuccess', function(amount)
+    if pendingVehicle and DoesEntityExist(pendingVehicle) then
+        SetVehicleFuelLevel(pendingVehicle, 100.0)
+    end
     isRefueling = false
+    pendingVehicle = nil
+end)
+
+-- Payment failed - cancel the refuel
+RegisterNetEvent('rpa-fuel:client:paymentFailed', function()
+    isRefueling = false
+    pendingVehicle = nil
 end)
 
 -- Fuel Consumption Loop
