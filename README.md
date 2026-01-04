@@ -22,20 +22,45 @@
 
 ---
 
+## � Dependencies
+
+- `rpa-lib` (Required)
+- `ox_target` or `qb-target` (Required)
+
+---
+
 ## 📥 Installation
 
 1. Download the [latest release](https://github.com/RP-Alpha/rpa-fuel/releases/latest)
 2. Extract to your `resources` folder
 3. Add to `server.cfg`:
    ```cfg
+   ensure rpa-lib
    ensure rpa-fuel
    ```
 
 ---
 
+## ⚙️ Configuration
+
+```lua
+Config.FuelPrice = 3.50  -- Price per liter
+Config.RefuelSpeed = 0.5  -- Liters per tick
+
+-- Consumption multipliers by vehicle class
+Config.ConsumptionRates = {
+    [0] = 1.0,   -- Compacts
+    [1] = 1.1,   -- Sedans
+    [6] = 1.5,   -- Sports
+    [7] = 2.0,   -- Super
+}
+```
+
+---
+
 ## 📚 Usage
 
-Simply drive to a gas station and use Third Eye on the pump to refuel.
+Drive to a gas station and use Third Eye on the pump to refuel.
 
 ---
 
